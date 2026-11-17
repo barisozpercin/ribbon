@@ -22,6 +22,7 @@ const CELLS = 10
 const LOW_AT = 15
 const TIGHT_CELLS = 6
 const BUTTON_CELLS = 8
+const MARGIN_PX = 4
 /** How often the band redraws, so the countdown and the warm-to-cold flip stay current. */
 const TICK_MS = 30_000
 
@@ -249,9 +250,18 @@ export const register: Register = on => {
       )
     }
 
+    const spacer = (key: string) =>
+      Svg ? (
+        <Box key={key} flexShrink={0}>
+          <Svg source={`<svg xmlns="http://www.w3.org/2000/svg" width="1" height="${MARGIN_PX}"/>`} alt="" width={1} height={MARGIN_PX} />
+        </Box>
+      ) : null
+
     return (
       <Box flexDirection="column" backgroundColor={BG}>
+        {spacer('top')}
         {rows}
+        {spacer('bottom')}
         {card}
       </Box>
     )

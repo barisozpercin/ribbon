@@ -32,7 +32,7 @@ test('a warm cache shows the WARM chip and the minutes left on the one row, fold
   await $.classic.SessionStart({ source: 'resume', seconds_since_last_response: WARM_IDLE, context_tokens: 770000, model: 'claude-opus-5-5' })
 
   const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
-  expect(await band.findAll({ type: 'Svg' })).toEqual([])
+  expect((await band.findAll({ type: 'Svg' })).filter(s => s.props.alt !== '')).toEqual([])
   expect(await band.find({ text: ' WARM ' })).toBeDefined()
   expect(await band.find({ text: ' 42m' })).toBeDefined()
   expect(await band.find({ key: 'card' })).toBeUndefined()
@@ -130,7 +130,7 @@ test('a cleared session drops the cache until the next reply', async ($, on) => 
   await $.classic.SessionStart({ source: 'clear' })
 
   const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
-  expect(await band.findAll({ type: 'Svg' })).toEqual([])
+  expect((await band.findAll({ type: 'Svg' })).filter(s => s.props.alt !== '')).toEqual([])
   expect(await band.find({ text: '99%' })).toBeDefined()
   await band.unmount()
 })

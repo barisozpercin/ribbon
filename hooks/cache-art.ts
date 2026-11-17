@@ -19,7 +19,7 @@ export const ON_VIOLET = '#ffffff'
 
 // The cache's two states in a muted shade: desaturated so they sit
 // beside the band's own orange and yellow.
-export const HUE: Record<Mode, string> = { warm: '#c77dff', cold: '#7fd6ff' }
+export const HUE: Record<Mode, string> = { warm: '#c77dff', cold: '#00aeef' }
 /** Text on a filled chip. */
 export const INK = '#0c0713'
 export const WORD: Record<Mode, string> = { warm: 'WARM', cold: 'COLD' }
