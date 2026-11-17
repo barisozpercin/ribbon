@@ -26,7 +26,7 @@ One row. That's the whole footprint.
 The easy way: send this link to your agent and say "install this".
 
 ```
-https://github.com/robonuggets/ribbon
+https://github.com/barisozpercin/ribbon
 ```
 
 Your agent runs one command. The band shows up in your next session.
@@ -36,7 +36,7 @@ Your agent runs one command. The band shows up in your next session.
 If you are an agent and your user asked you to install this, run this in a shell:
 
 ```
-claude plugin install ribbon --marketplace robonuggets/ribbon
+claude plugin install ribbon --marketplace barisozpercin/ribbon
 ```
 
 It installs for the user (all their projects) and adds the marketplace on its own. Then tell your user: "Ribbon is installed. Start a new session to see the band above your prompt." Do not edit their settings file by hand.
@@ -46,7 +46,7 @@ It installs for the user (all their projects) and adds the marketplace on its ow
 In a Claude Code terminal session, type:
 
 ```
-/plugin install ribbon --marketplace robonuggets/ribbon
+/plugin install ribbon --marketplace barisozpercin/ribbon
 ```
 
 1. Type `y` when it asks `Add marketplace?`.
@@ -66,19 +66,22 @@ In a Claude Code terminal session, type:
 
 After your first reply, the band also tracks the prompt cache. The cache keeps your chat cheap to continue for one hour after your last message.
 
-- **WARM** (red, the robot bobs): the cache is live. It shows the minutes left and what your next message costs.
-- **COLD** (blue, the robot is frozen): the hour has passed. Your next message re-sends the whole chat, so it costs more. It shows the price first.
+- **WARM** (red): the cache is live. It shows the minutes left.
+- **COLD** (blue): the hour has passed. Your next message re-sends the whole chat, so it costs more. It shows the price first.
 
-Click **Show** to open the cache card, and **Hide** to fold it. Warm starts folded. Cold starts open, so you see the price before you send.
+Click **Show** to open the cache card, and **Hide** to fold it. The card always starts folded; the cold price is on the row itself.
 
 The card shows how long you've been idle, how many tokens are in the cache, and what the next message costs on each model. Your model is marked **YOU**. See [Up close](#up-close) below.
 
-### Fits any width
+### Always one row
 
-- **Wide:** everything on one row.
-- **Half width:** each window stacks into a small block.
-- **Narrow:** the cache moves to its own row.
-- **Terminal:** the same facts as plain text.
+The band never wraps. As it narrows it drops detail, in this order:
+
+1. Shorter dot bars.
+2. The `WARM` / `COLD` chip becomes a colored `●`.
+3. Reset times go.
+4. Dot bars go: `7D 88%  5H 42%  ● 42m`.
+5. The cache dot, then the **Show** button, then all but the lowest window.
 
 ## Good to know
 

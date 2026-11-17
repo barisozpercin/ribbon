@@ -30,8 +30,8 @@ test('the band shows percent left for each window once a reading lands', async (
       component: 'AbovePrompt',
       props: PROPS,
     })
-    expect(await band.find({ text: '42% left' })).toBeDefined()
-    expect(await band.find({ text: '87.5% left' })).toBeDefined()
+    expect(await band.find({ text: '42%' })).toBeDefined()
+    expect(await band.find({ text: '88%' })).toBeDefined()
     // 7D (87.5% left) draws before 5H (42% left)
     const all = JSON.stringify(await band.find({ type: 'Box' }))
     expect(all.indexOf('7D')).toBeLessThan(all.indexOf('5H'))
@@ -39,7 +39,7 @@ test('the band shows percent left for each window once a reading lands', async (
   }
 })
 
-test('in a narrow band each window stacks, with percent left and reset time on their own lines', async ($, on) => {
+test('the band stays one row at every width, dropping detail as it narrows', async ($, on) => {
   mock.store(on)
   mock.clock(on, { now: Date.parse('2098-12-31T22:00:00Z') })
   on('session.start', ($, e) => ({ cwd: e.cwd }))
@@ -48,13 +48,26 @@ test('in a narrow band each window stacks, with percent left and reset time on t
   }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
 
-  const band = await $.ui.mount({
-    plugin: 'ribbon',
-    surface: 'desktop',
-    component: 'AbovePrompt',
-    props: { ...PROPS, bodyColumns: 36 },
-  })
-  expect(await band.find({ text: '42% left' })).toBeDefined()
-  expect(await band.find({ text: 'resets 2h 0m' })).toBeDefined()
-  await band.unmount()
+  for (const cols of [100, 60, 36, 24, 16]) {
+    const band = await $.ui.mount({
+      plugin: 'ribbon',
+      surface: 'desktop',
+      component: 'AbovePrompt',
+      props: { ...PROPS, bodyColumns: cols },
+    })
+    const row = await band.find({ key: 'row' })
+    expect(row?.props.height).toBe(1)
+    const text = (await band.find({ key: 'line' }))?.text ?? ''
+    expect(text.length).toBeLessThanOrEqual(cols - 2)
+    expect(await band.find({ text: '42%' })).toBeDefined()
+    await band.unmount()
+  }
+
+  const wide = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
+  expect(await wide.find({ text: ' 2h 0m' })).toBeDefined()
+  await wide.unmount()
+
+  const narrow = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: { ...PROPS, bodyColumns: 16 } })
+  expect((await narrow.find({ key: 'line' }))?.text).toBe('7D 88%  5H 42%')
+  await narrow.unmount()
 })
