@@ -57,7 +57,7 @@ In a Claude Code terminal session, type:
 
 ### Usage left
 
-- **7D** (orange) is your 7-day window. **5H** (yellow) is your 5-hour window.
+- **7D** (OmmaVQ pink) is your 7-day window. **5H** (OmmaSign cyan) is your 5-hour window.
 - Each dot bar shows what is **left**, not what is used.
 - Under each one is when it resets, for example `resets 3d 9h`.
 - If a window drops under 15%, a bold **LOW** shows next to it.
@@ -66,7 +66,7 @@ In a Claude Code terminal session, type:
 
 After your first reply, the band also tracks the prompt cache. The cache keeps your chat cheap to continue for one hour after your last message.
 
-- **WARM** (red): the cache is live. It shows the minutes left.
+- **WARM** (Omma violet): the cache is live. It shows the minutes left.
 - **COLD** (blue): the hour has passed. Your next message re-sends the whole chat, so it costs more. It shows the price first.
 
 Click **Show** to open the cache card, and **Hide** to fold it. The card always starts folded; the cold price is on the row itself.

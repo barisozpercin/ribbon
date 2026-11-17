@@ -3,14 +3,14 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { CacheFacts, Fold, Window } from '../types'
 import {
-  BG, EMPTY, HUE, INK, MUTED, ORANGE, TEXT, TTL_MIN, TTL_MS, WORD, YELLOW,
+  BG, EMPTY, HUE, INK, MUTED, VQ_PINK, TEXT, VIOLET, TTL_MIN, TTL_MS, WORD, SIGN_CYAN,
   bandPx, cardSvg, costOf, familyOf, fmtIdle, kindOf, mineModel, usd,
 } from './cache-art'
 import type { CacheView } from './cache-art'
 
 // A band above the prompt in a warm dark look: card surface, cream text,
 // dot-matrix bars. Shows how much of each usage window is LEFT, 7-day first, then
-// 5-hour; 7D is orange, 5H is yellow; a window under 15% adds a bold LOW.
+// 5-hour; 7D is OmmaVQ pink, 5H is OmmaSign cyan, warm is Omma violet; a window under 15% adds a bold LOW.
 // Always one row: as the band narrows it drops detail instead of wrapping.
 //
 // After the first reply it also shows the prompt cache: WARM (red)
@@ -31,7 +31,7 @@ const fold = atom({ plugin: 'ribbon', key: 'fold' } as const, null as Fold | nul
 
 const NAMES: Record<string, string> = { seven_day: '7D', five_hour: '5H', spend_limit: 'SPEND' }
 const ORDER: Record<string, number> = { seven_day: 0, five_hour: 1 }
-const COLORS: Record<string, string> = { seven_day: ORANGE, five_hour: YELLOW }
+const COLORS: Record<string, string> = { seven_day: VQ_PINK, five_hour: SIGN_CYAN }
 
 const clean = (list: readonly Window[]): Window[] =>
   list
@@ -183,7 +183,9 @@ export const register: Register = on => {
     const cacheSegs = (level: number): Seg[] => {
       if (!view) return []
       if (level === 0) {
-        const chip: Seg = { t: ` ${WORD[mode]} `, bg: hue, color: INK, bold: true }
+        const chip: Seg = cold
+          ? { t: ` ${WORD[mode]} `, bg: hue, color: INK, bold: true }
+          : { t: ` ${WORD[mode]} `, bg: VIOLET, color: '#ffffff', bold: true }
         if (!cold) return [chip, { t: ` ${minsLeft}m`, color: hue, bold: true }]
         return price
           ? [chip, { t: ` ${view.idle}`, color: hue, bold: true }, { t: ' · ', color: MUTED }, { t: price, color: TEXT, bold: true }]

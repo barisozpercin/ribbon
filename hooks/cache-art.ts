@@ -12,12 +12,13 @@ export const TEXT = '#e8e2d2'
 export const MUTED = '#8d8775'
 export const EMPTY = '#4a463b'
 export const LINE = '#36332b'
-export const ORANGE = '#ff6b1a'
-export const YELLOW = '#f5a623'
+export const VQ_PINK = '#e83361'
+export const SIGN_CYAN = '#00aeef'
+export const VIOLET = '#880ed3'
 
 // The cache's two states in a muted shade: desaturated so they sit
 // beside the band's own orange and yellow.
-export const HUE: Record<Mode, string> = { warm: '#cc6363', cold: '#6aaabd' }
+export const HUE: Record<Mode, string> = { warm: '#c77dff', cold: '#6aaabd' }
 /** Text on a filled chip. */
 export const INK = '#1c1a16'
 export const WORD: Record<Mode, string> = { warm: 'WARM', cold: 'COLD' }
