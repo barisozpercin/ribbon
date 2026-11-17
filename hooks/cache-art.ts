@@ -1,26 +1,27 @@
 // The cache card's drawings. Pure: each function returns an SVG string the band
 // hands to Svg. Nothing here touches the engine.
 
-import { SANS } from './font'
+import { LABEL, SANS } from './font'
 
 export type Mode = 'warm' | 'cold'
 export type Kind = 'wide' | 'stacked' | 'tight'
 
 // The band's own colours, measured from the app.
-export const BG = '#24221c'
-export const TEXT = '#e8e2d2'
-export const MUTED = '#8d8775'
-export const EMPTY = '#4a463b'
-export const LINE = '#36332b'
+export const BG = '#0c0713'
+export const TEXT = '#f4f1fa'
+export const MUTED = '#aba6b5'
+export const EMPTY = '#312d38'
+export const LINE = '#312d38'
 export const VQ_PINK = '#e83361'
 export const SIGN_CYAN = '#00aeef'
 export const VIOLET = '#880ed3'
+export const ON_VIOLET = '#ffffff'
 
 // The cache's two states in a muted shade: desaturated so they sit
 // beside the band's own orange and yellow.
-export const HUE: Record<Mode, string> = { warm: '#c77dff', cold: '#6aaabd' }
+export const HUE: Record<Mode, string> = { warm: '#c77dff', cold: '#7fd6ff' }
 /** Text on a filled chip. */
-export const INK = '#1c1a16'
+export const INK = '#0c0713'
 export const WORD: Record<Mode, string> = { warm: 'WARM', cold: 'COLD' }
 
 /** The prompt cache lives an hour after the last request that read or wrote it. */
@@ -94,7 +95,9 @@ export const mineModel = (v: CacheView): Model | undefined => MODELS.find(m => m
 export const svgDoc = (w: number, h: number, body: string, font: boolean): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
   (font
-    ? `<style>@font-face{font-family:RS;font-weight:100 900;src:url(data:font/woff2;base64,${SANS}) format('woff2')} text{font-family:RS,system-ui,'Segoe UI',sans-serif}</style>`
+    ? `<style>@font-face{font-family:Montserrat;font-weight:100 900;src:url(data:font/woff2;base64,${SANS}) format('woff2')}` +
+      `@font-face{font-family:'DM Sans';font-weight:100 1000;src:url(data:font/woff2;base64,${LABEL}) format('woff2')}` +
+      ` text{font-family:Montserrat,ui-sans-serif,system-ui,sans-serif} .lab{font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;font-weight:500}</style>`
     : '') +
   body +
   '</svg>'
@@ -102,13 +105,13 @@ export const svgDoc = (w: number, h: number, body: string, font: boolean): strin
 // ---------- Rounded chips (WARM, COLD, YOU) ----------
 // A text background can't be rounded, so a chip is a small drawing. The mod can't
 // measure text, so each chip's size was measured once, in the
-// embedded font: width = the word plus 0.62 em of padding each side, height 1.65 em.
+// embedded Montserrat: width = the word plus 0.62 em of padding each side, height 1.65 em.
 const CHIP: Record<string, { w: number; h: number }> = {
-  'WARM@13': { w: 63, h: 21 },
-  'COLD@13': { w: 58, h: 21 },
-  'WARM@11': { w: 54, h: 18 },
+  'WARM@13': { w: 67, h: 21 },
+  'COLD@13': { w: 59, h: 21 },
+  'WARM@11': { w: 57, h: 18 },
   'COLD@11': { w: 50, h: 18 },
-  'YOU@10': { w: 36, h: 17 },
+  'YOU@10': { w: 38, h: 17 },
 }
 
 export const chipShapes = (x: number, y: number, word: string, fill: string, size: number, ls: number): { w: number; h: number; svg: string } => {
@@ -161,7 +164,7 @@ export const roboShapes = (x: number, y: number, size: number, mode: Mode): stri
     const oy = y + 1.6 * u
     return (
       `<g transform="translate(${ox} ${oy})" shape-rendering="crispEdges">` +
-      `<ellipse cx="${4 * u}" cy="${7.75 * u}" rx="${3 * u}" ry="${0.42 * u}" fill="#000" opacity=".4" shape-rendering="auto">` +
+      `<ellipse cx="${4 * u}" cy="${7.75 * u}" rx="${3 * u}" ry="${0.42 * u}" fill="${BG}" opacity=".4" shape-rendering="auto">` +
       `<animate attributeName="rx" values="${3 * u};${2.3 * u};${3 * u}" dur="1.2s" repeatCount="indefinite" ${ease}/></ellipse>` +
       `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 ${-1.1 * u};0 0" dur="1.2s" repeatCount="indefinite" ${ease}/>` +
       pixels(u, ROBO) +
@@ -173,7 +176,7 @@ export const roboShapes = (x: number, y: number, size: number, mode: Mode): stri
   }
   // Cold: still, pale, inside a rounded ice block with icicles and one twinkle.
   const u = size / 12.2
-  const ice = mix(HUE.cold, '#ffffff', 0.5)
+  const ice = mix(HUE.cold, TEXT, 0.5)
   const ox = x + 1.6 * u
   const oy = y + 1.6 * u
   const bx = -1.2 * u
@@ -182,9 +185,9 @@ export const roboShapes = (x: number, y: number, size: number, mode: Mode): stri
   const bh = 9.4 * u
   let s = `<g transform="translate(${ox} ${oy})">`
   s += pixels(u, ice)
-  s += `<rect x="${2 * u}" y="0" width="${u}" height="${u * 0.45}" fill="#fff" opacity=".9"/><rect x="${5 * u}" y="0" width="${u}" height="${u * 0.45}" fill="#fff" opacity=".9"/>`
+  s += `<rect x="${2 * u}" y="0" width="${u}" height="${u * 0.45}" fill="${TEXT}" opacity=".9"/><rect x="${5 * u}" y="0" width="${u}" height="${u * 0.45}" fill="${TEXT}" opacity=".9"/>`
   s += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${1.5 * u}" fill="${HUE.cold}" fill-opacity=".28" stroke="${ice}" stroke-width="${0.38 * u}"/>`
-  s += `<path d="M${bx + 0.9 * u} ${by + 2.6 * u}l${1.6 * u} ${-1.6 * u}M${bx + 0.9 * u} ${by + 4.2 * u}l${0.8 * u} ${-0.8 * u}" stroke="#fff" stroke-opacity=".75" stroke-width="${0.32 * u}" stroke-linecap="round"/>`
+  s += `<path d="M${bx + 0.9 * u} ${by + 2.6 * u}l${1.6 * u} ${-1.6 * u}M${bx + 0.9 * u} ${by + 4.2 * u}l${0.8 * u} ${-0.8 * u}" stroke="${TEXT}" stroke-opacity=".75" stroke-width="${0.32 * u}" stroke-linecap="round"/>`
   for (const ix of [1.4, 4.4, 7.2]) {
     const tx = bx + ix * u
     const ty = by + bh
@@ -194,7 +197,7 @@ export const roboShapes = (x: number, y: number, size: number, mode: Mode): stri
   const sy = by + 0.2 * u
   const r = 1.1 * u
   s +=
-    `<path d="M${sx} ${sy - r}L${sx + 0.25 * r} ${sy - 0.25 * r}L${sx + r} ${sy}L${sx + 0.25 * r} ${sy + 0.25 * r}L${sx} ${sy + r}L${sx - 0.25 * r} ${sy + 0.25 * r}L${sx - r} ${sy}L${sx - 0.25 * r} ${sy - 0.25 * r}z" fill="#fff">` +
+    `<path d="M${sx} ${sy - r}L${sx + 0.25 * r} ${sy - 0.25 * r}L${sx + r} ${sy}L${sx + 0.25 * r} ${sy + 0.25 * r}L${sx} ${sy + r}L${sx - 0.25 * r} ${sy + 0.25 * r}L${sx - r} ${sy}L${sx - 0.25 * r} ${sy - 0.25 * r}z" fill="${TEXT}">` +
     `<animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;0.55;0.7;0.85;1" dur="2.8s" repeatCount="indefinite"/></path>`
   return s + '</g>'
 }
@@ -217,7 +220,7 @@ export const cardSvg = (v: CacheView, kind: Kind, W: number): { source: string; 
   const ICE = HUE.cold
   const t = (x: number, y: number, str: string, o: TextOpts = {}) =>
     `<text x="${x}" y="${y}" font-size="${o.size || 11}" font-weight="${o.w || 700}" fill="${o.fill || MUTED}"` +
-    ` letter-spacing="${o.ls ?? 0}" text-anchor="${o.anchor || 'start'}">${str}</text>`
+    ` letter-spacing="${o.ls ?? 0}" text-anchor="${o.anchor || 'start'}"${o.ls ? ' class="lab"' : ''}>${str}</text>`
   const vline = (x: number, y: number, h: number) => `<rect x="${x}" y="${y}" width="1" height="${h}" fill="${LINE}"/>`
   const hline = (y: number) => `<rect x="13" y="${y}" width="${W - 26}" height="1" fill="${LINE}"/>`
 

@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { CacheFacts, Fold, Window } from '../types'
 import {
-  BG, EMPTY, HUE, INK, MUTED, VQ_PINK, TEXT, VIOLET, TTL_MIN, TTL_MS, WORD, SIGN_CYAN,
+  BG, EMPTY, HUE, INK, MUTED, VQ_PINK, TEXT, ON_VIOLET, VIOLET, TTL_MIN, TTL_MS, WORD, SIGN_CYAN,
   bandPx, cardSvg, costOf, familyOf, fmtIdle, kindOf, mineModel, usd,
 } from './cache-art'
 import type { CacheView } from './cache-art'
@@ -185,7 +185,7 @@ export const register: Register = on => {
       if (level === 0) {
         const chip: Seg = cold
           ? { t: ` ${WORD[mode]} `, bg: hue, color: INK, bold: true }
-          : { t: ` ${WORD[mode]} `, bg: VIOLET, color: '#ffffff', bold: true }
+          : { t: ` ${WORD[mode]} `, bg: VIOLET, color: ON_VIOLET, bold: true }
         if (!cold) return [chip, { t: ` ${minsLeft}m`, color: hue, bold: true }]
         return price
           ? [chip, { t: ` ${view.idle}`, color: hue, bold: true }, { t: ' · ', color: MUTED }, { t: price, color: TEXT, bold: true }]

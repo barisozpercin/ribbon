@@ -100,7 +100,7 @@ ribbon/
 │   ├── hooks.json          points to the module
 │   ├── register.tsx        the band: usage, cache tracking, layout
 │   ├── cache-art.ts        the cache card and robot drawings, the price table
-│   └── font.ts             Outfit, embedded so the drawings render anywhere
+│   └── font.ts             Montserrat and DM Sans, embedded so the drawings render anywhere
 ├── types/index.d.ts        the shape of what the band remembers
 ├── tests/                  7 tests: layouts, warm and cold, terminal, cleared sessions
 └── assets/                 banner, screenshots, hex icon
@@ -146,7 +146,7 @@ Click **Show** and the band opens into the cache card.
 
 [MIT](LICENSE).
 
-The embedded font is [Outfit](https://github.com/Outfitio/Outfit-Fonts), under the SIL Open Font License 1.1.
+The embedded fonts are [Montserrat](https://github.com/JulietaUla/Montserrat) and [DM Sans](https://github.com/googlefonts/dm-fonts), both under the SIL Open Font License 1.1. Colors and type follow the OmmaWorks design system.
 
 Made by Jay E from RoboLabs. Learn more at [RoboNuggets](https://robonuggets.com).
 
