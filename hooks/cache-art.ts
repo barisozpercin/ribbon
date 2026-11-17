@@ -114,7 +114,7 @@ const CHIP: Record<string, { w: number; h: number }> = {
   'YOU@10': { w: 38, h: 17 },
 }
 
-export const chipShapes = (x: number, y: number, word: string, fill: string, size: number, ls: number): { w: number; h: number; svg: string } => {
+export const chipShapes = (x: number, y: number, word: string, fill: string, size: number, ls: number, ink: string = INK): { w: number; h: number; svg: string } => {
   const { w, h } = CHIP[`${word}@${size}`] ?? { w: Math.round(word.length * size * 0.8 + size * 1.24), h: Math.round(size * 1.65) }
   return {
     w,
@@ -122,7 +122,7 @@ export const chipShapes = (x: number, y: number, word: string, fill: string, siz
     svg:
       `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.round(h * 0.32)}" fill="${fill}"/>` +
       `<text x="${x + w / 2}" y="${y + h / 2 + size * 0.36}" font-size="${size}" font-weight="700" letter-spacing="${ls}"` +
-      ` text-anchor="middle" fill="${INK}">${word}</text>`,
+      ` text-anchor="middle" fill="${ink}">${word}</text>`,
   }
 }
 
@@ -130,6 +130,63 @@ export const chipShapes = (x: number, y: number, word: string, fill: string, siz
 export const chipSvg = (mode: Mode): { source: string; w: number; h: number } => {
   const c = chipShapes(0, 0, WORD[mode], HUE[mode], 13, 1)
   return { source: svgDoc(c.w, c.h, c.svg, true), w: c.w, h: c.h }
+}
+
+export type Face = 'M600' | 'M700' | 'D500'
+const ADV: Record<Face, Record<string, number>> = {
+  M600: {"0":673,"1":381,"2":582,"3":582,"4":679,"5":584,"6":627,"7":608,"8":652,"9":627," ":276,"%":860,"$":629,".":244,",":244,":":244,"·":284,"d":687,"h":685,"m":1053,"s":515,"D":826,"H":810,"W":1114,"A":749,"R":731,"M":955,"C":718,"O":842,"L":599,"E":670,"F":637,"T":602,"S":629,"P":716,"N":810,"G":772,"!":278},
+  M700: {"0":679,"1":392,"2":590,"3":592,"4":689,"5":595,"6":637,"7":620,"8":660,"9":637," ":283,"%":877,"$":638,".":262,",":262,":":262,"·":302,"d":692,"h":691,"m":1049,"s":531,"D":826,"H":808,"W":1133,"A":766,"R":735,"M":955,"C":724,"O":844,"L":604,"E":671,"F":639,"T":618,"S":638,"P":722,"N":808,"G":771,"!":289},
+  D500: {"0":690,"1":328,"2":576,"3":595,"4":621,"5":613,"6":630,"7":535,"8":616,"9":630," ":256,"%":822,"$":588,".":215,",":202,":":219,"·":215,"d":636,"h":589,"m":907,"s":511,"D":694,"H":691,"W":984,"A":678,"R":605,"M":855,"C":723,"O":777,"L":537,"E":571,"F":542,"T":572,"S":588,"P":591,"N":703,"G":764,"!":269},
+}
+
+export type Piece =
+  | { k: 'text'; s: string; face: Face; size: number; fill: string; ls?: number }
+  | { k: 'gap'; w: number }
+  | { k: 'dots'; on: number; off: number; fill: string }
+  | { k: 'chip'; word: string; fill: string; ink: string }
+  | { k: 'dot'; fill: string }
+
+export const STRIP_H = 24
+const DOT_PITCH = 7
+const DOT_R = 2.5
+
+const textW = (s: string, face: Face, size: number, ls: number): number =>
+  [...s].reduce((n, c) => n + (ADV[face][c] ?? 720), 0) * size / 1000 + ls * [...s].length
+
+export const pieceW = (p: Piece): number =>
+  p.k === 'text' ? textW(p.s, p.face, p.size, p.ls ?? 0)
+  : p.k === 'gap' ? p.w
+  : p.k === 'dots' ? (p.on + p.off) * DOT_PITCH - (DOT_PITCH - 2 * DOT_R)
+  : p.k === 'chip' ? chipShapes(0, 0, p.word, p.fill, 11, 1).w
+  : 8
+
+export const stripW = (ps: Piece[]): number => Math.ceil(ps.reduce((n, p) => n + pieceW(p), 0) * 1.03)
+
+export const stripSvg = (ps: Piece[], margin: number): { source: string; w: number; h: number } => {
+  const h = STRIP_H + 2 * margin
+  const mid = margin + STRIP_H / 2
+  let x = 0
+  let body = ''
+  for (const p of ps) {
+    if (p.k === 'text') {
+      const weight = p.face === 'M700' ? 700 : p.face === 'M600' ? 600 : 500
+      body +=
+        `<text x="${x.toFixed(1)}" y="${(mid + p.size * 0.36).toFixed(1)}" font-size="${p.size}" font-weight="${weight}" fill="${p.fill}"` +
+        ` letter-spacing="${p.ls ?? 0}"${p.face === 'D500' ? ' class="lab"' : ''}>${p.s.replace(/·/g, '&#183;')}</text>`
+    } else if (p.k === 'dots') {
+      for (let i = 0; i < p.on + p.off; i++) {
+        body += `<circle cx="${(x + DOT_R + i * DOT_PITCH).toFixed(1)}" cy="${mid}" r="${DOT_R}" fill="${i < p.on ? p.fill : EMPTY}"/>`
+      }
+    } else if (p.k === 'chip') {
+      const c = chipShapes(x, 0, p.word, p.fill, 11, 1, p.ink)
+      body += `<g transform="translate(0 ${(mid - c.h / 2).toFixed(1)})">${c.svg}</g>`
+    } else if (p.k === 'dot') {
+      body += `<circle cx="${x + 4}" cy="${mid}" r="4" fill="${p.fill}"/>`
+    }
+    x += pieceW(p)
+  }
+  const w = stripW(ps)
+  return { source: svgDoc(w, h, body, true), w, h }
 }
 
 // ---------- Robo: bobbing when warm, frozen in ice when cold ----------

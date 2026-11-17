@@ -75,6 +75,8 @@ The card shows how long you've been idle, how many tokens are in the cache, and 
 
 ### Always one row
 
+On desktop and mobile the row is drawn in the brand fonts (Montserrat, DM Sans for labels) with a 4px margin above and below. The terminal shows the same facts as plain text in its own font.
+
 The band never wraps. As it narrows it drops detail, in this order:
 
 1. Shorter dot bars.

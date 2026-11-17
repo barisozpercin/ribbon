@@ -3,10 +3,10 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { CacheFacts, Fold, Window } from '../types'
 import {
-  BG, EMPTY, HUE, INK, MUTED, VQ_PINK, TEXT, ON_VIOLET, VIOLET, TTL_MIN, TTL_MS, WORD, SIGN_CYAN,
+  BG, EMPTY, HUE, INK, MUTED, VQ_PINK, TEXT, ON_VIOLET, VIOLET, stripSvg, stripW, TTL_MIN, TTL_MS, WORD, SIGN_CYAN,
   bandPx, cardSvg, costOf, familyOf, fmtIdle, kindOf, mineModel, usd,
 } from './cache-art'
-import type { CacheView } from './cache-art'
+import type { CacheView, Piece } from './cache-art'
 
 // A band above the prompt in a warm dark look: card surface, cream text,
 // dot-matrix bars. Shows how much of each usage window is LEFT, 7-day first, then
@@ -22,6 +22,8 @@ const CELLS = 10
 const LOW_AT = 15
 const TIGHT_CELLS = 6
 const BUTTON_CELLS = 8
+const CELL_PX = 12
+const GROUP_GAP_PX = 18
 const MARGIN_PX = 4
 /** How often the band redraws, so the countdown and the warm-to-cold flip stay current. */
 const TICK_MS = 30_000
@@ -39,8 +41,9 @@ const clean = (list: readonly Window[]): Window[] =>
     .map(w => ({ kind: w.kind, percentUsed: w.percentUsed, resetsAt: w.resetsAt }))
     .sort((a, b) => (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9))
 
+const filled = (left: number, cells: number): number => Math.max(0, Math.min(cells, Math.round((left / 100) * cells)))
 const dots = (left: number, cells: number): { on: string; off: string } => {
-  const n = Math.max(0, Math.min(cells, Math.round((left / 100) * cells)))
+  const n = filled(left, cells)
   return { on: '●'.repeat(n), off: '·'.repeat(cells - n) }
 }
 
@@ -198,6 +201,43 @@ export const register: Register = on => {
       return [dot, price ? { t: ` ${price}`, color: TEXT, bold: true } : { t: ` ${view.idle}`, color: hue, bold: true }]
     }
 
+    const winPieces = (w: Window, level: number): Piece[] => {
+      const left = Math.max(0, Math.round(100 - w.percentUsed))
+      const col = COLORS[w.kind] ?? TEXT
+      const ps: Piece[] = [
+        { k: 'text', s: NAMES[w.kind] ?? w.kind.toUpperCase(), face: 'D500', size: 11, fill: MUTED, ls: 0.88 },
+        { k: 'gap', w: 6 },
+      ]
+      if (level <= 2) {
+        const cells = level === 0 ? CELLS : TIGHT_CELLS
+        const n = filled(left, cells)
+        ps.push({ k: 'dots', on: n, off: cells - n, fill: col }, { k: 'gap', w: 7 })
+      }
+      ps.push({ k: 'text', s: `${left}%`, face: 'M600', size: 13, fill: col })
+      if (left < LOW_AT) ps.push({ k: 'gap', w: 4 }, { k: 'text', s: level <= 1 ? 'LOW' : '!', face: 'M700', size: 11, fill: TEXT })
+      const reset = level <= 1 ? fmtReset(w.resetsAt, now) : ''
+      if (reset) ps.push({ k: 'gap', w: 7 }, { k: 'text', s: reset, face: 'D500', size: 12, fill: MUTED })
+      return ps
+    }
+
+    const cachePieces = (level: number): Piece[] => {
+      if (!view) return []
+      const big = (str: string, fill: string, face: 'M600' | 'M700' = 'M600'): Piece => ({ k: 'text', s: str, face, size: 13, fill })
+      if (level === 0) {
+        const chip: Piece = cold
+          ? { k: 'chip', word: WORD[mode], fill: hue, ink: INK }
+          : { k: 'chip', word: WORD[mode], fill: VIOLET, ink: ON_VIOLET }
+        if (!cold) return [chip, { k: 'gap', w: 7 }, big(`${minsLeft}m`, hue)]
+        const ps: Piece[] = [chip, { k: 'gap', w: 7 }, big(view.idle, hue)]
+        if (price) ps.push({ k: 'gap', w: 6 }, { k: 'text', s: '·', face: 'M600', size: 13, fill: MUTED }, { k: 'gap', w: 6 }, big(price, TEXT, 'M700'))
+        return ps
+      }
+      const dot: Piece = { k: 'dot', fill: hue }
+      if (level === 2) return [dot]
+      if (!cold) return [dot, { k: 'gap', w: 6 }, big(`${minsLeft}m`, hue)]
+      return [dot, { k: 'gap', w: 6 }, price ? big(price, TEXT, 'M700') : big(view.idle, hue)]
+    }
+
     const GAP = '  '
     const lowest = list.reduce<Window[]>((a, w) => (a.length && a[0].percentUsed >= w.percentUsed ? a : [w]), [])
     const line = (win: number, cacheLevel: number | null): Seg[] => {
@@ -206,14 +246,23 @@ export const register: Register = on => {
       if (groups.length === 0) groups.push([{ t: 'waiting for the first reply', color: MUTED }])
       return groups.flatMap((g, i) => (i === 0 ? g : [{ t: GAP }, ...g]))
     }
+    const linePieces = (win: number, cacheLevel: number | null): Piece[] => {
+      const groups = (win === 4 ? lowest : list).map(w => winPieces(w, Math.min(win, 3)))
+      if (cacheLevel !== null && view) groups.push(cachePieces(cacheLevel))
+      if (groups.length === 0) groups.push([{ k: 'text', s: 'waiting for the first reply', face: 'D500', size: 12, fill: MUTED }])
+      return groups.flatMap((g, i): Piece[] => (i === 0 ? g : [{ k: 'gap', w: GROUP_GAP_PX }, ...g]))
+    }
 
     const canFold = Svg !== null && view !== null
     const PLANS: Array<[number, number | null, boolean]> = [
       [0, 0, true], [1, 0, true], [1, 1, true], [2, 1, true], [3, 1, true], [3, 2, true], [3, 2, false], [3, null, false], [4, null, false],
     ]
     const room = columns - 2
-    const plan =
-      PLANS.find(([w, c, b]) => width(line(w, c)) + (canFold && b ? BUTTON_CELLS : 0) <= room) ?? PLANS[PLANS.length - 1]
+    const fits = ([w, c, b]: [number, number | null, boolean]): boolean =>
+      Svg
+        ? stripW(linePieces(w, c)) + (canFold && b ? BUTTON_CELLS * CELL_PX : 0) <= room * CELL_PX
+        : width(line(w, c)) + (canFold && b ? BUTTON_CELLS : 0) <= room
+    const plan = PLANS.find(fits) ?? PLANS[PLANS.length - 1]
     const [winLevel, cacheLevel, wantsButton] = plan
     const segs = line(winLevel, cacheLevel)
     const showButton = canFold && wantsButton
@@ -222,15 +271,23 @@ export const register: Register = on => {
     const open = showButton && stored !== null && stored.mode === mode && stored.open
     const toggle = () => update($, fold, f => ({ mode, open: !(f && f.mode === mode && f.open) }))
 
+    const strip = Svg ? stripSvg(linePieces(winLevel, cacheLevel), MARGIN_PX) : null
     const rows = (
-      <Box key="row" flexDirection="row" paddingX={1} height={1} overflow="hidden">
-        <Box key="line" flexGrow={1} flexShrink={1}>
-          <Text wrap="truncate-end">
-            {segs.map((s, i) => (
-              <Text key={`s-${i}`} color={s.color} bold={s.bold} backgroundColor={s.bg}>{s.t}</Text>
-            ))}
-          </Text>
-        </Box>
+      <Box key="row" flexDirection="row" paddingX={1} alignItems="center" {...(Svg ? {} : { height: 1, overflow: 'hidden' as const })}>
+        {Svg && strip ? (
+          <Box key="line" flexShrink={1}>
+            <Svg source={strip.source} alt={segs.map(s => s.t).join('').trim()} width={strip.w} height={strip.h} />
+          </Box>
+        ) : (
+          <Box key="line" flexGrow={1} flexShrink={1}>
+            <Text wrap="truncate-end">
+              {segs.map((s, i) => (
+                <Text key={`s-${i}`} color={s.color} bold={s.bold} backgroundColor={s.bg}>{s.t}</Text>
+              ))}
+            </Text>
+          </Box>
+        )}
+        {Svg ? <Box key="grow" flexGrow={1} /> : null}
         {showButton ? (
           <Box key="fold" flexShrink={0}>
             <Button key="cache-fold" label={open ? 'Hide' : 'Show'} onPress={toggle} />
@@ -250,18 +307,9 @@ export const register: Register = on => {
       )
     }
 
-    const spacer = (key: string) =>
-      Svg ? (
-        <Box key={key} flexShrink={0}>
-          <Svg source={`<svg xmlns="http://www.w3.org/2000/svg" width="1" height="${MARGIN_PX}"/>`} alt="" width={1} height={MARGIN_PX} />
-        </Box>
-      ) : null
-
     return (
       <Box flexDirection="column" backgroundColor={BG}>
-        {spacer('top')}
         {rows}
-        {spacer('bottom')}
         {card}
       </Box>
     )

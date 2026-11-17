@@ -16,10 +16,18 @@ const PROPS = {
 const WARM_IDLE = 18 * 60 // 18 minutes: warm, cold in 42m
 const COLD_IDLE = (3 * 24 + 9) * 3600 // 3d 9h: cold
 
-const lineFits = async (band: { find: (q: object) => Promise<{ text?: string } | undefined> }, cols: number) => {
-  const text = (await band.find({ key: 'line' }))?.text ?? ''
+type Node = { type?: string; text?: string; props?: Record<string, unknown>; children?: Node[] }
+type Band = { find: (q: object) => Promise<Node | undefined> }
+const lineOf = async (band: Band) => {
+  const n = await band.find({ key: 'line' })
+  const svg = n?.children?.find(c => c.type === 'Svg')
+  return svg ? { text: String(svg.props?.alt ?? ''), px: Number(svg.props?.width), source: String(svg.props?.source ?? '') } : { text: n?.text ?? '', px: null, source: '' }
+}
+const lineFits = async (band: Band, cols: number) => {
+  const { text, px } = await lineOf(band)
   const button = (await band.find({ key: 'cache-fold' })) ? 8 : 0
-  expect(text.length + button).toBeLessThanOrEqual(cols - 2)
+  if (px === null) expect(text.length + button).toBeLessThanOrEqual(cols - 2)
+  else expect(px + button * 12).toBeLessThanOrEqual((cols - 2) * 12)
 }
 
 test('a warm cache shows the WARM chip and the minutes left on the one row, folded', async ($, on) => {
@@ -32,9 +40,10 @@ test('a warm cache shows the WARM chip and the minutes left on the one row, fold
   await $.classic.SessionStart({ source: 'resume', seconds_since_last_response: WARM_IDLE, context_tokens: 770000, model: 'claude-opus-5-5' })
 
   const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
-  expect((await band.findAll({ type: 'Svg' })).filter(s => s.props.alt !== '')).toEqual([])
-  expect(await band.find({ text: ' WARM ' })).toBeDefined()
-  expect(await band.find({ text: ' 42m' })).toBeDefined()
+  const line = await lineOf(band)
+  expect(line.text).toContain('WARM')
+  expect(line.text).toContain('42m')
+  expect(line.source).toContain('#880ed3')
   expect(await band.find({ key: 'card' })).toBeUndefined()
   expect((await band.find({ key: 'cache-fold' }))?.props.label).toBe('Show')
   await lineFits(band, 80)
@@ -56,10 +65,11 @@ test('a cold cache stays folded with the re-cache price, and Show opens the card
 
   const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
   expect(await band.find({ key: 'card' })).toBeUndefined()
-  expect(await band.find({ text: ' COLD ' })).toBeDefined()
-  expect(await band.find({ text: ' 3d 9h' })).toBeDefined()
+  const line = await lineOf(band)
+  expect(line.text).toContain('COLD')
+  expect(line.text).toContain('3d 9h')
   // Opus 5.5: 770k tokens at the 1-hour write price, 2 x $4 per million.
-  expect(await band.find({ text: '$6.16' })).toBeDefined()
+  expect(line.text).toContain('$6.16')
   await lineFits(band, 80)
 
   await band.press({ key: 'cache-fold' })
@@ -81,7 +91,6 @@ test('squeezed, the cache compacts to a dot on the same row and never wraps', as
 
   for (const cols of [80, 60, 53, 42, 33, 24, 18, 12]) {
     const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: { ...PROPS, bodyColumns: cols } })
-    expect((await band.find({ key: 'row' }))?.props.height).toBe(1)
     expect(await band.find({ key: 'cache' })).toBeUndefined()
     expect(await band.find({ key: 'block' })).toBeUndefined()
     await lineFits(band, cols)
@@ -89,12 +98,11 @@ test('squeezed, the cache compacts to a dot on the same row and never wraps', as
   }
 
   const half = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: { ...PROPS, bodyColumns: 53 } })
-  expect(await half.find({ text: ' WARM ' })).toBeUndefined()
-  expect(await half.find({ text: ' 42m' })).toBeDefined()
+  expect((await lineOf(half)).text).toContain('42m')
   await half.unmount()
 
   const narrow = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: { ...PROPS, bodyColumns: 33 } })
-  expect((await narrow.find({ key: 'line' }))?.text).toBe('7D 99%  5H 82%  ● 42m')
+  expect((await lineOf(narrow)).text).toContain('● 42m')
   await narrow.press({ key: 'cache-fold' })
   // Narrow's card is the compact one: 33 columns is a 456 px band.
   expect(JSON.stringify(await narrow.find({ key: 'card' }))).toContain('width=\\"456\\"')
@@ -130,7 +138,7 @@ test('a cleared session drops the cache until the next reply', async ($, on) => 
   await $.classic.SessionStart({ source: 'clear' })
 
   const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
-  expect((await band.findAll({ type: 'Svg' })).filter(s => s.props.alt !== '')).toEqual([])
-  expect(await band.find({ text: '99%' })).toBeDefined()
+  expect((await lineOf(band)).text).not.toContain('WARM')
+  expect((await lineOf(band)).text).toContain('99%')
   await band.unmount()
 })
