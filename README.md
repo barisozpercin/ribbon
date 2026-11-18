@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="ribbon" width="100%">
+  <img src="assets/banner.png" alt="ribbon, OmmaWorks edition, based on ribbon by Jay E | RoboNuggets" width="100%">
 </p>
 
 # ribbon
