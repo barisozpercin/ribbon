@@ -7,6 +7,7 @@
 A free mod for Claude Code. It adds a slim band above your prompt that shows:
 
 - **How much usage you have left** in your 7-day and 5-hour windows, and when each one resets.
+- **How full your context window is** (CTX, percent used).
 - **Whether your prompt cache is warm or cold**, and what your next message will cost.
 
 It installs once and is there in every session after that. No commands to learn.
@@ -57,7 +58,7 @@ In a Claude Code terminal session, type:
 
 ### Usage left
 
-- **7D** (OmmaVQ pink) is your 7-day window. **5H** (OmmaSign cyan) is your 5-hour window.
+- **7D** (OmmaVQ pink) is your 7-day window. **5H** (OmmaSign cyan) is your 5-hour window. **CTX** (Omma violet) is how much of the context window is used.
 - Each dot bar shows what is **left**, not what is used.
 - Under each one is when it resets, for example `resets 3d 9h`.
 - If a window drops under 15%, a bold **LOW** shows next to it.

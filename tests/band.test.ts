@@ -76,3 +76,26 @@ test('the band stays one row at every width, dropping detail as it narrows', asy
   expect((await lineOf(narrow)).text).toBe('7D 88%  5H 42%')
   await narrow.unmount()
 })
+
+test('the band shows how full the context window is, after the usage windows', async ($, on) => {
+  mock.store(on)
+  mock.clock(on, { now: Date.parse('2098-12-31T22:00:00Z') })
+  on('session.start', ($: any, e: any) => ({ cwd: e.cwd }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200000, tokens: 74000, percent: 37 }, rateLimits: WINDOWS } }))
+  await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+  for (const surface of ['terminal', 'desktop'] as const) {
+    for (const cols of [100, 40, 24]) {
+      const band = await $.ui.mount({ plugin: 'ribbon', surface, component: 'AbovePrompt', props: { ...PROPS, bodyColumns: cols } })
+      const { text, px, source } = await lineOf(band)
+      if (cols === 100) {
+        expect(text).toContain('CTX')
+        expect(text).toContain('37%')
+        expect(text.indexOf('5H')).toBeLessThan(text.indexOf('CTX'))
+        if (px !== null) expect(source).toContain('#880ed3')
+      }
+      if (px === null) expect(text.length).toBeLessThanOrEqual(cols - 2)
+      else expect(px).toBeLessThanOrEqual((cols - 2) * 12)
+      await band.unmount()
+    }
+  }
+})

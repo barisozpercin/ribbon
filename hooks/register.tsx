@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { CacheFacts, Fold, Window } from '../types'
+import type { CacheFacts, Context, Fold, Window } from '../types'
 import {
   BG, EMPTY, HUE, INK, MUTED, VQ_PINK, TEXT, ON_VIOLET, VIOLET, stripSvg, stripW, TTL_MIN, TTL_MS, WORD, SIGN_CYAN,
   bandPx, cardSvg, costOf, familyOf, fmtIdle, kindOf, mineModel, usd,
@@ -11,6 +11,7 @@ import type { CacheView, Piece } from './cache-art'
 // A band above the prompt in a warm dark look: card surface, cream text,
 // dot-matrix bars. Shows how much of each usage window is LEFT, 7-day first, then
 // 5-hour; 7D is OmmaVQ pink, 5H is OmmaSign cyan, warm is Omma violet; a window under 15% adds a bold LOW.
+// Then CTX, how full the context window is, in Omma violet.
 // Always one row: as the band narrows it drops detail instead of wrapping.
 //
 // After the first reply it also shows the prompt cache: WARM (red)
@@ -30,11 +31,18 @@ const TICK_MS = 30_000
 
 const windows = atom({ plugin: 'ribbon', key: 'windows' } as const, [] as Window[])
 const cache = atom({ plugin: 'ribbon', key: 'cache' } as const, null as CacheFacts | null)
+const context = atom({ plugin: 'ribbon', key: 'context' } as const, null as Context)
 const fold = atom({ plugin: 'ribbon', key: 'fold' } as const, null as Fold | null)
 
 const NAMES: Record<string, string> = { seven_day: '7D', five_hour: '5H', spend_limit: 'SPEND' }
 const ORDER: Record<string, number> = { seven_day: 0, five_hour: 1 }
 const COLORS: Record<string, string> = { seven_day: VQ_PINK, five_hour: SIGN_CYAN }
+
+const pct = (c: { tokens?: number; window: number; percent?: number }): Context => {
+  if (typeof c.percent === 'number') return Math.max(0, Math.min(100, Math.round(c.percent)))
+  if (c.tokens && c.tokens > 0 && c.window > 0) return Math.max(0, Math.min(100, Math.round((c.tokens / c.window) * 100)))
+  return null
+}
 
 const clean = (list: readonly Window[]): Window[] =>
   list
@@ -76,6 +84,7 @@ export const viewOf = (c: CacheFacts | null, now: number): CacheView | null => {
 const pull = async ($: EngineInterface): Promise<void> => {
   const u = await $.session.usage()
   await update($, windows, () => clean(u.rateLimits))
+  await update($, context, () => pct(u.context))
 }
 
 /** Fresh context figures from the engine onto the cache facts, when it has them. */
@@ -101,6 +110,10 @@ export const register: Register = on => {
     if (e.changed.includes('rateLimits')) {
       await update($, windows, () => clean(e.rateLimits))
     }
+    if (e.changed.includes('context')) {
+      const p = pct(e.context)
+      await update($, context, prev => p ?? prev)
+    }
     if (e.changed.includes('context') && e.context.tokens && e.context.tokens > 0) {
       const tokens = e.context.tokens
       await update($, cache, c => (c ? { ...c, tokens, window: e.context.window || c.window } : c))
@@ -114,6 +127,7 @@ export const register: Register = on => {
     if (e.source === 'clear' || e.source === 'compact') {
       await update($, cache, () => null)
       await update($, fold, () => null)
+      await update($, context, () => null)
     } else if ((e.source === 'resume' || e.source === 'fork') && typeof e.seconds_since_last_response === 'number') {
       const now = await $.clock.now()
       const lastAt = now - e.seconds_since_last_response * 1000
@@ -156,6 +170,7 @@ export const register: Register = on => {
     const list = await read($, windows)
     const now = await $.clock.now()
     const view = viewOf(await read($, cache), now)
+    const used = await read($, context)
 
     const columns = e.props.bodyColumns ?? e.viewport?.columns ?? 100
 
@@ -174,6 +189,17 @@ export const register: Register = on => {
       if (left < LOW_AT) segs.push({ t: level <= 1 ? ' LOW' : '!', color: TEXT, bold: true })
       const reset = level <= 1 ? fmtReset(w.resetsAt, now) : ''
       if (reset) segs.push({ t: ` ${reset}`, color: MUTED })
+      return segs
+    }
+
+    const ctxSegs = (level: number): Seg[] => {
+      if (used === null) return []
+      const segs: Seg[] = [{ t: 'CTX ', color: MUTED, bold: true }]
+      if (level <= 2) {
+        const d = dots(used, level === 0 ? CELLS : TIGHT_CELLS)
+        segs.push({ t: d.on, color: VIOLET }, { t: d.off, color: EMPTY }, { t: ' ' })
+      }
+      segs.push({ t: `${used}%`, color: HUE.warm, bold: true })
       return segs
     }
 
@@ -220,6 +246,21 @@ export const register: Register = on => {
       return ps
     }
 
+    const ctxPieces = (level: number): Piece[] => {
+      if (used === null) return []
+      const ps: Piece[] = [
+        { k: 'text', s: 'CTX', face: 'D500', size: 11, fill: MUTED, ls: 0.88 },
+        { k: 'gap', w: 6 },
+      ]
+      if (level <= 2) {
+        const cells = level === 0 ? CELLS : TIGHT_CELLS
+        const n = filled(used, cells)
+        ps.push({ k: 'dots', on: n, off: cells - n, fill: VIOLET }, { k: 'gap', w: 7 })
+      }
+      ps.push({ k: 'text', s: `${used}%`, face: 'M600', size: 13, fill: HUE.warm })
+      return ps
+    }
+
     const cachePieces = (level: number): Piece[] => {
       if (!view) return []
       const big = (str: string, fill: string, face: 'M600' | 'M700' = 'M600'): Piece => ({ k: 'text', s: str, face, size: 13, fill })
@@ -242,12 +283,14 @@ export const register: Register = on => {
     const lowest = list.reduce<Window[]>((a, w) => (a.length && a[0].percentUsed >= w.percentUsed ? a : [w]), [])
     const line = (win: number, cacheLevel: number | null): Seg[] => {
       const groups = (win === 4 ? lowest : list).map(w => winSegs(w, Math.min(win, 3)))
+      if (win < 4 && used !== null) groups.push(ctxSegs(win))
       if (cacheLevel !== null && view) groups.push(cacheSegs(cacheLevel))
       if (groups.length === 0) groups.push([{ t: 'waiting for the first reply', color: MUTED }])
       return groups.flatMap((g, i) => (i === 0 ? g : [{ t: GAP }, ...g]))
     }
     const linePieces = (win: number, cacheLevel: number | null): Piece[] => {
       const groups = (win === 4 ? lowest : list).map(w => winPieces(w, Math.min(win, 3)))
+      if (win < 4 && used !== null) groups.push(ctxPieces(win))
       if (cacheLevel !== null && view) groups.push(cachePieces(cacheLevel))
       if (groups.length === 0) groups.push([{ k: 'text', s: 'waiting for the first reply', face: 'D500', size: 12, fill: MUTED }])
       return groups.flatMap((g, i): Piece[] => (i === 0 ? g : [{ k: 'gap', w: GROUP_GAP_PX }, ...g]))
