@@ -13,11 +13,11 @@ A free mod for Claude Code. It adds a slim band above your prompt that shows:
 It installs once and is there in every session after that. No commands to learn.
 
 <p align="center">
-  <img src="assets/slim-warm.png" alt="ribbon, one slim row: 7D 41% left, 5H 96% left, cache warm with 53 minutes left" width="100%">
+  <img src="assets/slim-warm.png" alt="ribbon, one slim row: 7D 59% used, 5H 4% used, context 24% used, cache warm with 53 minutes left" width="100%">
 </p>
 
 <p align="center">
-  <img src="assets/slim-cold.png" alt="ribbon, one slim row: 7D 45% left, 5H 89% left, cache cold for 12h 45m, next message $4.78" width="100%">
+  <img src="assets/slim-cold.png" alt="ribbon, one slim row: 7D 55% used, 5H 11% used, context 24% used, cache cold for 12h 45m, next message $1.94" width="100%">
 </p>
 
 One row. That's the whole footprint.
