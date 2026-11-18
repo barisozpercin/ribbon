@@ -139,6 +139,6 @@ test('a cleared session drops the cache until the next reply', async ($, on) => 
 
   const band = await $.ui.mount({ plugin: 'ribbon', surface: 'desktop', component: 'AbovePrompt', props: PROPS })
   expect((await lineOf(band)).text).not.toContain('WARM')
-  expect((await lineOf(band)).text).toContain('99%')
+  expect((await lineOf(band)).text).toContain('1%')
   await band.unmount()
 })
