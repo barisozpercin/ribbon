@@ -9,7 +9,7 @@ import {
 import type { CacheView, Piece } from './cache-art'
 
 // A band above the prompt in a warm dark look: card surface, cream text,
-// dot-matrix bars. Shows how much of each usage window is LEFT, 7-day first, then
+// dot-matrix bars. Shows how much of each usage window is USED, 7-day first, then
 // 5-hour; 7D is OmmaVQ pink, 5H is OmmaSign cyan, warm is Omma violet; a window under 15% adds a bold LOW.
 // Then CTX, how full the context window is, in Omma violet.
 // Always one row: as the band narrows it drops detail instead of wrapping.
@@ -178,14 +178,15 @@ export const register: Register = on => {
     const width = (segs: Seg[]): number => segs.reduce((n, s) => n + s.t.length, 0)
 
     const winSegs = (w: Window, level: number): Seg[] => {
-      const left = Math.max(0, Math.round(100 - w.percentUsed))
+      const usedPct = Math.max(0, Math.min(100, Math.round(w.percentUsed)))
+      const left = 100 - usedPct
       const col = COLORS[w.kind] ?? TEXT
       const segs: Seg[] = [{ t: `${NAMES[w.kind] ?? w.kind.toUpperCase()} `, color: MUTED, bold: true }]
       if (level <= 2) {
-        const d = dots(left, level === 0 ? CELLS : TIGHT_CELLS)
+        const d = dots(usedPct, level === 0 ? CELLS : TIGHT_CELLS)
         segs.push({ t: d.on, color: col }, { t: d.off, color: EMPTY }, { t: ' ' })
       }
-      segs.push({ t: `${left}%`, color: col, bold: true })
+      segs.push({ t: `${usedPct}%`, color: col, bold: true })
       if (left < LOW_AT) segs.push({ t: level <= 1 ? ' LOW' : '!', color: TEXT, bold: true })
       const reset = level <= 1 ? fmtReset(w.resetsAt, now) : ''
       if (reset) segs.push({ t: ` ${reset}`, color: MUTED })
@@ -228,7 +229,8 @@ export const register: Register = on => {
     }
 
     const winPieces = (w: Window, level: number): Piece[] => {
-      const left = Math.max(0, Math.round(100 - w.percentUsed))
+      const usedPct = Math.max(0, Math.min(100, Math.round(w.percentUsed)))
+      const left = 100 - usedPct
       const col = COLORS[w.kind] ?? TEXT
       const ps: Piece[] = [
         { k: 'text', s: NAMES[w.kind] ?? w.kind.toUpperCase(), face: 'D500', size: 11, fill: MUTED, ls: 0.88 },
@@ -236,10 +238,10 @@ export const register: Register = on => {
       ]
       if (level <= 2) {
         const cells = level === 0 ? CELLS : TIGHT_CELLS
-        const n = filled(left, cells)
+        const n = filled(usedPct, cells)
         ps.push({ k: 'dots', on: n, off: cells - n, fill: col }, { k: 'gap', w: 7 })
       }
-      ps.push({ k: 'text', s: `${left}%`, face: 'M600', size: 13, fill: col })
+      ps.push({ k: 'text', s: `${usedPct}%`, face: 'M600', size: 13, fill: col })
       if (left < LOW_AT) ps.push({ k: 'gap', w: 4 }, { k: 'text', s: level <= 1 ? 'LOW' : '!', face: 'M700', size: 11, fill: TEXT })
       const reset = level <= 1 ? fmtReset(w.resetsAt, now) : ''
       if (reset) ps.push({ k: 'gap', w: 7 }, { k: 'text', s: reset, face: 'D500', size: 12, fill: MUTED })

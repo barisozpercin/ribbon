@@ -29,13 +29,13 @@ const start = async ($: any, on: any) => {
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
 }
 
-test('the band shows percent left for each window once a reading lands', async ($, on) => {
+test('the band shows percent used for each window once a reading lands', async ($, on) => {
   await start($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const band = await $.ui.mount({ plugin: 'ribbon', surface, component: 'AbovePrompt', props: PROPS })
     const { text } = await lineOf(band)
-    expect(text).toContain('42%')
-    expect(text).toContain('88%')
+    expect(text).toContain('58%')
+    expect(text).toContain('13%')
     expect(text.indexOf('7D')).toBeLessThan(text.indexOf('5H'))
     await band.unmount()
   }
@@ -63,7 +63,7 @@ test('the band stays one row at every width, dropping detail as it narrows', asy
       } else {
         expect(px).toBeLessThanOrEqual((cols - 2) * 12)
       }
-      expect(text).toContain('42%')
+      expect(text).toContain('58%')
       await band.unmount()
     }
   }
@@ -73,7 +73,7 @@ test('the band stays one row at every width, dropping detail as it narrows', asy
   await wide.unmount()
 
   const narrow = await $.ui.mount({ plugin: 'ribbon', surface: 'terminal', component: 'AbovePrompt', props: { ...PROPS, bodyColumns: 16 } })
-  expect((await lineOf(narrow)).text).toBe('7D 88%  5H 42%')
+  expect((await lineOf(narrow)).text).toBe('7D 13%  5H 58%')
   await narrow.unmount()
 })
 
